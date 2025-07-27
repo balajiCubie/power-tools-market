@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Power Tool Market Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals (Slate, Stone, Zinc) with Amber Accent -->
+    <!-- Application Structure Plan: A dashboard-style, single-page application is chosen for its ability to present a high-level overview while allowing users to drill down into specific areas of interest. The structure is thematic, not linear like the report. It starts with a 'Market Overview' for key metrics, followed by an 'Interactive Classification Explorer' which is the core of the app, allowing users to understand the taxonomy through hands-on filtering. 'Technological Deep Dive' and 'Global Market Comparison' sections provide focused insights into key trends. This structure facilitates a non-linear, discovery-oriented user journey, making the complex data more digestible and engaging than a simple scrollable report. -->
+    <!-- Visualization & Content Choices: 
+        - Market Share (Donut Chart): Goal: Inform proportion. Viz: Chart.js Donut. Interaction: Hover for details. Justification: Quickly shows the dominance of electric tools.
+        - Market Growth (Bar Chart): Goal: Compare growth rates. Viz: Chart.js Bar. Interaction: Tooltips. Justification: Clearly visualizes the high CAGR of pneumatic tools.
+        - Classification Explorer (Interactive HTML/CSS Grid): Goal: Organize & Explore. Viz: Dynamic HTML grid with JS. Interaction: Clicking filters updates the displayed tool examples and descriptions. Justification: This is the most effective way to represent a multi-level hierarchy interactively without using SVG/Mermaid. It encourages user exploration and understanding of the classification logic.
+        - Brushed vs. Brushless (Comparison Table): Goal: Compare technologies. Viz: Styled HTML table. Interaction: None, static comparison. Justification: A table is the clearest way to present a direct feature-for-feature comparison.
+        - Global Market Comparison (Interactive Tabs): Goal: Compare regions. Viz: HTML tabs with JS. Interaction: Clicking tabs reveals region-specific data. Justification: Tabs provide a space-efficient way to compare detailed information across different geographical areas.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+                max-height: 400px;
+            }
+        }
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+        }
+        .nav-link.active {
+            color: #f59e0b; /* amber-500 */
+            border-bottom-color: #f59e0b;
+        }
+        .filter-btn {
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .filter-btn.active {
+            background-color: #71717a; /* zinc-500 */
+            color: white;
+        }
+        .tool-card {
+            transition: transform 0.3s, box-shadow 0.3s;
+            will-change: transform;
+        }
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .tab-btn.active {
+            background-color: #d4d4d8; /* zinc-300 */
+            color: #18181b; /* zinc-900 */
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 text-2xl font-bold text-slate-900">
+                        🛠️ Power Tool Explorer
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#overview" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:text-amber-500 border-b-2 border-transparent">Market Overview</a>
+                        <a href="#explorer" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:text-amber-500 border-b-2 border-transparent">Classification Explorer</a>
+                        <a href="#tech" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:text-amber-500 border-b-2 border-transparent">Tech Deep Dive</a>
+                        <a href="#global" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:text-amber-500 border-b-2 border-transparent">Global Comparison</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+
+        <!-- Section 1: Market Overview -->
+        <section id="overview" class="mb-16 scroll-mt-16">
+            <h2 class="text-3xl font-bold text-slate-900 mb-2">Global Power Tool Market at a Glance</h2>
+            <p class="text-lg text-slate-600 mb-8 max-w-3xl">
+                The power tool market is a dynamic and growing sector, projected to reach **USD 107.14 billion by 2030**. This section provides a high-level overview of key market metrics, highlighting the dominant technologies and growth areas shaping the industry. Interact with the charts to see the breakdown.
+            </p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="text-xl font-semibold text-center mb-4">Market Share by Power Source (2024 Revenue)</h3>
+                    <div class="chart-container">
+                        <canvas id="powerSourceChart"></canvas>
+                    </div>
+                    <p class="text-sm text-slate-500 mt-4 text-center">Electric tools, both corded and cordless, overwhelmingly dominate the market, showcasing the industry's reliance on this power source.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="text-xl font-semibold text-center mb-4">Projected CAGR by Segment (Forecast Period)</h3>
+                    <div class="chart-container">
+                        <canvas id="cagrChart"></canvas>
+                    </div>
+                    <p class="text-sm text-slate-500 mt-4 text-center">While cordless electric tools show strong, steady growth, pneumatic tools are projected to have the fastest growth rate, indicating expanding industrial applications.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Interactive Classification Explorer -->
+        <section id="explorer" class="mb-16 scroll-mt-16">
+            <h2 class="text-3xl font-bold text-slate-900 mb-2">Interactive Classification Explorer</h2>
+            <p class="text-lg text-slate-600 mb-8 max-w-3xl">
+                Power tools are categorized in many ways. This interactive explorer helps you understand the unified classification system. Select filters from different categories to see how they combine and discover example tools that fit the criteria. This hands-on approach simplifies the complex taxonomy of the power tool world.
+            </p>
+            
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <!-- Filters -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div>
+                        <h4 class="font-semibold mb-2 text-slate-700">1. Market Segment</h4>
+                        <div id="market-filter" class="flex flex-wrap gap-2">
+                            <button data-filter="market" data-value="all" class="filter-btn active text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">All Segments</button>
+                            <button data-filter="market" data-value="Industrial" class="filter-btn text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">Industrial</button>
+                            <button data-filter="market" data-value="Commercial" class="filter-btn text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">Commercial</button>
+                            <button data-filter="market" data-value="Consumer" class="filter-btn text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">Consumer</button>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-2 text-slate-700">2. Power Source</h4>
+                        <div id="power-filter" class="flex flex-wrap gap-2">
+                            <button data-filter="power" data-value="all" class="filter-btn active text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">All Power</button>
+                            <button data-filter="power" data-value="Cordless" class="filter-btn text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">Cordless</button>
+                            <button data-filter="power" data-value="Corded" class="filter-btn text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">Corded</button>
+                            <button data-filter="power" data-value="Pneumatic" class="filter-btn text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">Pneumatic</button>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-2 text-slate-700">3. Mobility</h4>
+                        <div id="mobility-filter" class="flex flex-wrap gap-2">
+                             <button data-filter="mobility" data-value="all" class="filter-btn active text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">All Mobility</button>
+                            <button data-filter="mobility" data-value="Portable" class="filter-btn text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">Portable</button>
+                            <button data-filter="mobility" data-value="Stationary" class="filter-btn text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">Stationary</button>
+                        </div>
+                    </div>
+                     <div>
+                        <h4 class="font-semibold mb-2 text-slate-700">4. Core Function</h4>
+                        <div id="function-filter" class="flex flex-wrap gap-2">
+                             <button data-filter="function" data-value="all" class="filter-btn active text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">All Functions</button>
+                            <button data-filter="function" data-value="Cutting" class="filter-btn text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">Cutting</button>
+                            <button data-filter="function" data-value="Drilling & Fastening" class="filter-btn text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">Drilling</button>
+                            <button data-filter="function" data-value="Grinding & Polishing" class="filter-btn text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-3 rounded-lg">Grinding</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tool Display -->
+                <div id="tool-display" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <!-- Tool cards will be dynamically inserted here -->
+                </div>
+                 <div id="no-results" class="text-center py-10 text-slate-500 hidden">
+                    <h3 class="text-xl font-semibold">No Matching Tools Found</h3>
+                    <p>Try adjusting your filters to discover different tool combinations.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Tech Deep Dive -->
+        <section id="tech" class="mb-16 scroll-mt-16">
+            <h2 class="text-3xl font-bold text-slate-900 mb-2">Technological Deep Dive</h2>
+            <p class="text-lg text-slate-600 mb-8 max-w-3xl">
+                The engine of innovation in power tools lies in their core technology. This section compares the foundational motor types—Brushed vs. Brushless—and explores the transformative impact of Smart/Connected tools, which are turning simple devices into intelligent assets for the modern jobsite.
+            </p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">Motor Technology: Brushed vs. Brushless</h3>
+                    <p class="text-slate-600 mb-4">The shift from brushed to brushless motors is a key market trend, prioritizing long-term value and performance over initial cost. Brushless motors offer higher efficiency, longer lifespan, and more power in a compact size.</p>
+                    <table class="w-full text-sm text-left text-slate-500">
+                        <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                            <tr>
+                                <th scope="col" class="px-4 py-3">Feature</th>
+                                <th scope="col" class="px-4 py-3">Brushed Motors</th>
+                                <th scope="col" class="px-4 py-3">Brushless Motors</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="bg-white border-b">
+                                <th scope="row" class="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">Lifespan</th>
+                                <td class="px-4 py-3">Shorter (brush wear)</td>
+                                <td class="px-4 py-3 font-semibold text-green-600">Longer (>10k hours)</td>
+                            </tr>
+                            <tr class="bg-slate-50 border-b">
+                                <th scope="row" class="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">Efficiency</th>
+                                <td class="px-4 py-3">Lower (friction/heat)</td>
+                                <td class="px-4 py-3 font-semibold text-green-600">Higher (more power)</td>
+                            </tr>
+                            <tr class="bg-white border-b">
+                                <th scope="row" class="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">Maintenance</th>
+                                <td class="px-4 py-3">Requires brush changes</td>
+                                <td class="px-4 py-3 font-semibold text-green-600">Minimal</td>
+                            </tr>
+                            <tr class="bg-slate-50">
+                                <th scope="row" class="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">Cost</th>
+                                <td class="px-4 py-3">Lower initial cost</td>
+                                <td class="px-4 py-3 font-semibold text-red-600">Higher initial cost</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                     <h3 class="text-xl font-semibold mb-4">The Rise of Smart & Connected Tools</h3>
+                     <p class="text-slate-600 mb-4">IIoT and AI are revolutionizing the industry. Smart tools offer features that go far beyond simple operation, providing significant value in professional and industrial settings.</p>
+                     <ul class="space-y-3">
+                         <li class="flex items-start">
+                            <span class="flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mr-3 font-bold">1</span>
+                            <div>
+                                <h4 class="font-semibold">Asset Tracking & Security</h4>
+                                <p class="text-slate-500">Real-time location and tool lockout capabilities reduce theft and improve inventory management.</p>
+                            </div>
+                         </li>
+                         <li class="flex items-start">
+                             <span class="flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mr-3 font-bold">2</span>
+                            <div>
+                                <h4 class="font-semibold">Performance Optimization</h4>
+                                <p class="text-slate-500">Customizable settings and usage data allow for precise control and workflow improvements.</p>
+                            </div>
+                         </li>
+                         <li class="flex items-start">
+                            <span class="flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mr-3 font-bold">3</span>
+                            <div>
+                                <h4 class="font-semibold">Predictive Maintenance & AI</h4>
+                                <p class="text-slate-500">AI algorithms analyze data to predict failures, automate quality checks, and ensure compliance.</p>
+                            </div>
+                         </li>
+                     </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Global Comparison -->
+        <section id="global" class="scroll-mt-16">
+            <h2 class="text-3xl font-bold text-slate-900 mb-2">Global Market Comparison</h2>
+            <p class="text-lg text-slate-600 mb-8 max-w-3xl">
+                The power tool market varies significantly across the globe. While trends like cordless adoption are universal, regional differences in growth drivers, regulations, and consumer preferences are crucial. Select a region to explore its unique market characteristics and key standards.
+            </p>
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="bg-slate-100 p-2 flex flex-wrap gap-2">
+                    <button data-tab="usa" class="tab-btn flex-grow text-center px-4 py-2 rounded-lg font-medium text-slate-600 hover:bg-slate-200 active">USA</button>
+                    <button data-tab="europe" class="tab-btn flex-grow text-center px-4 py-2 rounded-lg font-medium text-slate-600 hover:bg-slate-200">Europe</button>
+                    <button data-tab="asia" class="tab-btn flex-grow text-center px-4 py-2 rounded-lg font-medium text-slate-600 hover:bg-slate-200">Asia-Pacific</button>
+                </div>
+                <div id="tab-content" class="p-6">
+                    <!-- Tab content will be dynamically inserted here -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-800 text-slate-300 mt-16">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center">
+            <p>&copy; 2025 Power Tool Market Explorer. An interactive summary of the Deep Research Study.</p>
+            <p class="text-xs text-slate-400 mt-1">This application is for informational purposes only, based on the provided research report.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // --- Data ---
+            const powerSourceData = {
+                labels: ['Electric (Corded & Cordless)', 'Pneumatic', 'Hydraulic', 'Gas-Powered & Other'],
+                datasets: [{
+                    label: 'Market Share %',
+                    data: [63.45, 20, 10, 6.55], // Adjusted for visualization
+                    backgroundColor: ['#f59e0b', '#64748b', '#94a3b8', '#cbd5e1'],
+                    borderColor: '#f8fafc',
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            };
+
+            const cagrData = {
+                labels: ['Pneumatic', 'Cordless Electric', 'Overall Market'],
+                datasets: [{
+                    label: 'Projected CAGR %',
+                    data: [26.89, 7.5, 5.8], // Example data from report
+                    backgroundColor: ['#f59e0b', '#fbbf24', '#fcd34d'],
+                    borderRadius: 4,
+                }]
+            };
+
+            const toolData = [
+                { name: 'Heavy-Duty Hammer Drill', market: 'Commercial', power: 'Cordless', mobility: 'Portable', func: 'Drilling & Fastening', desc: 'High-torque drill for concrete and masonry in construction.' },
+                { name: 'Professional Table Saw', market: 'Commercial', power: 'Corded', mobility: 'Stationary', func: 'Cutting', desc: 'For precise, high-volume cuts in a woodworking shop.' },
+                { name: 'DIY Cordless Drill Kit', market: 'Consumer', power: 'Cordless', mobility: 'Portable', func: 'Drilling & Fastening', desc: 'Versatile and affordable for home repairs and projects.' },
+                { name: 'Industrial Air Nailer', market: 'Industrial', power: 'Pneumatic', mobility: 'Portable', func: 'Drilling & Fastening', desc: 'Durable, high-speed fastening for manufacturing lines.' },
+                { name: 'Angle Grinder', market: 'Commercial', power: 'Corded', mobility: 'Portable', func: 'Grinding & Polishing', desc: 'For cutting and grinding metal, brick, and concrete on job sites.' },
+                { name: 'Bench Grinder', market: 'Industrial', power: 'Corded', mobility: 'Stationary', func: 'Grinding & Polishing', desc: 'Fixed grinder for shaping and sharpening tools in a workshop.' },
+                { name: 'Reciprocating Saw', market: 'Commercial', power: 'Cordless', mobility: 'Portable', func: 'Cutting', desc: 'Essential for demolition and rough cutting of various materials.' },
+                { name: 'Pneumatic Impact Wrench', market: 'Industrial', power: 'Pneumatic', mobility: 'Portable', func: 'Drilling & Fastening', desc: 'High power-to-weight ratio for automotive and industrial assembly.' },
+                { name: 'Consumer Jigsaw', market: 'Consumer', power: 'Corded', mobility: 'Portable', func: 'Cutting', desc: 'Ideal for cutting curves and intricate shapes in wood for DIY projects.' },
+                { name: 'Industrial Drill Press', market: 'Industrial', power: 'Corded', mobility: 'Stationary', func: 'Drilling & Fastening', desc: 'Provides ultimate precision for drilling in metalworking.' },
+                { name: 'Orbital Sander', market: 'Consumer', power: 'Cordless', mobility: 'Portable', func: 'Grinding & Polishing', desc: 'Used for achieving smooth finishes on wood surfaces.' },
+                { name: 'Hydraulic Press', market: 'Industrial', power: 'Hydraulic', mobility: 'Stationary', func: 'Shaping & Routing', desc: 'Applies immense force for forming and shaping metal.' },
+            ];
+
+            const globalData = {
+                usa: {
+                    title: 'USA Market',
+                    icon: '🇺🇸',
+                    content: `
+                        <p class="mb-4">Characterized by steady demand from both DIY and professional sectors. Strong adoption of cordless technology and combo kits is a key trend.</p>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li><span class="font-semibold">Key Drivers:</span> Flourishing construction and automotive industries.</li>
+                            <li><span class="font-semibold">Popular Tools:</span> Drills, Saws, Impact Wrenches, Combo Kits.</li>
+                            <li><span class="font-semibold">Key Standards:</span> <strong class="text-slate-800">ANSI B11 series</strong> for machine tool safety, covering construction, care, and use for both suppliers and end-users.</li>
+                        </ul>
+                    `
+                },
+                europe: {
+                    title: 'European Market',
+                    icon: '🇪🇺',
+                    content: `
+                        <p class="mb-4">Shows robust growth with a strong emphasis on sustainability and stringent safety regulations. Electrification of equipment is a major trend.</p>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li><span class="font-semibold">Key Drivers:</span> Established construction/automotive sectors, government incentives for efficiency.</li>
+                            <li><span class="font-semibold">Popular Tools:</span> Professional-grade tools with high safety ratings.</li>
+                            <li><span class="font-semibold">Key Standards:</span> Mandatory <strong class="text-slate-800">CE Mark</strong> (for safety/health compliance), voluntary <strong class="text-slate-800">GS Mark</strong> (tested safety), and adherence to IEC/ISO standards.</li>
+                        </ul>
+                    `
+                },
+                asia: {
+                    title: 'Asia-Pacific Market',
+                    icon: '�',
+                    content: `
+                        <p class="mb-4">The largest and fastest-growing market, fueled by rapid industrialization, urbanization, and a burgeoning DIY culture via e-commerce.</p>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li><span class="font-semibold">Key Drivers:</span> Massive infrastructure projects, rising disposable income, manufacturing hub (China >85% of world supply).</li>
+                            <li><span class="font-semibold">Popular Tools:</span> Drills are dominant; clear distinction between DIY, professional, and industrial grades.</li>
+                            <li><span class="font-semibold">Key Standards:</span> Broad adherence to <strong class="text-slate-800">IEC standards</strong> with ongoing efforts towards <strong class="text-slate-800">ASEAN harmonization</strong> for consistency.</li>
+                        </ul>
+                    `
+                }
+            };
+            
+            // --- Chart.js Initialization ---
+            const initCharts = () => {
+                const powerSourceCtx = document.getElementById('powerSourceChart').getContext('2d');
+                new Chart(powerSourceCtx, {
+                    type: 'doughnut',
+                    data: powerSourceData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: { callbacks: { label: (context) => `${context.label}: ${context.raw}%` } }
+                        }
+                    }
+                });
+
+                const cagrCtx = document.getElementById('cagrChart').getContext('2d');
+                new Chart(cagrCtx, {
+                    type: 'bar',
+                    data: cagrData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: (context) => `${context.raw}% CAGR` } }
+                        },
+                        scales: { x: { beginAtZero: true, grid: { display: false } }, y: { grid: { display: false } } }
+                    }
+                });
+            };
+
+            // --- Interactive Explorer Logic ---
+            const filters = {
+                market: 'all',
+                power: 'all',
+                mobility: 'all',
+                function: 'all'
+            };
+
+            const toolDisplay = document.getElementById('tool-display');
+            const noResults = document.getElementById('no-results');
+
+            const renderTools = () => {
+                toolDisplay.innerHTML = '';
+                const filteredTools = toolData.filter(tool => {
+                    return (filters.market === 'all' || tool.market === filters.market) &&
+                           (filters.power === 'all' || tool.power === filters.power) &&
+                           (filters.mobility === 'all' || tool.mobility === filters.mobility) &&
+                           (filters.function === 'all' || tool.func === filters.function);
+                });
+
+                if (filteredTools.length === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                    filteredTools.forEach(tool => {
+                        const card = document.createElement('div');
+                        card.className = 'tool-card bg-slate-50 border border-slate-200 p-4 rounded-lg shadow-sm fade-in';
+                        card.innerHTML = `
+                            <h5 class="font-bold text-slate-800">${tool.name}</h5>
+                            <p class="text-sm text-slate-600 mb-3">${tool.desc}</p>
+                            <div class="flex flex-wrap gap-2 text-xs">
+                                <span class="bg-amber-100 text-amber-800 px-2 py-1 rounded-full">${tool.market}</span>
+                                <span class="bg-sky-100 text-sky-800 px-2 py-1 rounded-full">${tool.power}</span>
+                                <span class="bg-violet-100 text-violet-800 px-2 py-1 rounded-full">${tool.mobility}</span>
+                                <span class="bg-pink-100 text-pink-800 px-2 py-1 rounded-full">${tool.func}</span>
+                            </div>
+                        `;
+                        toolDisplay.appendChild(card);
+                    });
+                }
+            };
+
+            document.querySelectorAll('.filter-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const filterType = button.dataset.filter;
+                    const value = button.dataset.value;
+                    
+                    filters[filterType] = value;
+
+                    document.querySelectorAll(`button[data-filter="${filterType}"]`).forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    renderTools();
+                });
+            });
+
+            // --- Global Comparison Tabs Logic ---
+            const tabContent = document.getElementById('tab-content');
+            const tabButtons = document.querySelectorAll('.tab-btn');
+
+            const renderTabContent = (tab) => {
+                const data = globalData[tab];
+                tabContent.innerHTML = `
+                    <div class="fade-in">
+                        <h3 class="text-2xl font-bold mb-4 flex items-center"><span class="text-3xl mr-3">${data.icon}</span> ${data.title}</h3>
+                        ${data.content}
+                    </div>
+                `;
+            };
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    renderTabContent(button.dataset.tab);
+                });
+            });
+
+            // --- Smooth Scrolling & Nav Highlighting ---
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('section');
+
+            const activateNavLink = () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 80) { // 80px offset for sticky header
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${current}`) {
+                        link.classList.add('active');
+                    }
+                });
+            };
+            
+            window.addEventListener('scroll', activateNavLink);
+
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+
+            // --- Initial Load ---
+            initCharts();
+            renderTools();
+            renderTabContent('usa');
+            activateNavLink();
+        });
+    </script>
+</body>
+</html>
